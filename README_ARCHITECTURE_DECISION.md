@@ -317,7 +317,3 @@ Use this flowchart to guide your decision:
 - **POC Notes:** [README_POC_NOTES.md](./README_POC_NOTES.md)
 - **Microsoft APIM + Okta:** [Medium Article](https://medium.com/azurediary/secure-api-in-azure-api-management-using-okta-identity-management-75a0cf74a7f8)
 
----
-
-**Last Updated:** January 2025  
-**Maintained By:** Azure Architecture Team
