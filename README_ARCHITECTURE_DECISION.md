@@ -106,22 +106,20 @@
 
 ## Feature Comparison Matrix
 
-| Feature | Option 1: Entra | Option 2: APIM | Winner |
-|---------|----------------|----------------|--------|
-| **Setup Complexity** | Medium (SAML federation) | High (APIM policies + OAuth) | 🥇 Option 1 |
-| **Teams Integration** | Native SSO | Custom OAuth connection | 🥇 Option 1 |
-| **Token Management** | Entra ID managed | Bot Framework SDK | 🥇 Option 1 |
-| **Multi-Provider Support** | Entra only | Any OAuth 2.0 | 🥇 Option 2 |
-| **API Gateway Features** | None | Rate limit, cache, transform | 🥇 Option 2 |
-| **Monitoring** | App Insights | APIM Analytics + App Insights | 🥇 Option 2 |
-| **Cost (monthly)** | $0 (included) | $300-2500 (APIM tier) | 🥇 Option 1 |
-| **Latency** | ~50-100ms | ~60-150ms | 🥇 Option 1 |
-| **Security Layers** | 2 (Entra, EasyAuth) | 3 (Okta, APIM, Logic App) | 🥇 Option 2 |
-| **Backend Flexibility** | Must support Entra | Any backend | 🥇 Option 2 |
-| **Scalability** | High | Very High (APIM handles) | 🥇 Option 2 |
-| **Group Claim Limit** | 200 (Entra limit) | Unlimited (custom handling) | 🥇 Option 2 |
-
----
+| Feature | Entra ID Federation | APIM | Winner |
+|---------|-------------------|------|--------|
+| **Setup Complexity** | Medium (SAML federation) | High (APIM policies + OAuth) | 🥇 Entra ID |
+| **Teams Integration** | Native SSO | Custom OAuth connection | 🥇 Entra ID |
+| **Token Management** | Entra ID managed | Bot Framework SDK | 🥇 Entra ID |
+| **Multi-Provider Support** | Entra only | Any OAuth 2.0 | 🥇 APIM |
+| **API Gateway Features** | None | Rate limit, cache, transform | 🥇 APIM |
+| **Monitoring** | App Insights | APIM Analytics + App Insights | 🥇 APIM |
+| **Cost (monthly)** | $0 (included) | $300-2500 (APIM tier) | 🥇 Entra ID |
+| **Latency** | ~50-100ms | ~60-150ms | 🥇 Entra ID |
+| **Security Layers** | 2 (Entra, EasyAuth) | 3 (Okta, APIM, Logic App) | 🥇 APIM |
+| **Backend Flexibility** | Must support Entra | Any backend | 🥇 APIM |
+| **Scalability** | High | Very High (APIM handles) | 🥇 APIM |
+| **Group Claim Limit** | 200 (Entra limit) | Unlimited (custom handling) | 🥇 APIM |
 
 ## Cost Analysis (12 months)
 
