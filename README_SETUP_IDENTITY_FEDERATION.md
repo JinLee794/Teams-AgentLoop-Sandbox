@@ -116,13 +116,28 @@ Automates user/group sync from Okta → Entra ID:
    - Click **Grant admin consent**
 
 3. **Expose an API**:
-   - **Application ID URI**: `api://<client-id>` (or custom domain)
-   - **Add scope**: `access_as_user` (admin & user consent, enabled)
-   - **Authorize Teams clients** (add all 3):
-     - Desktop: `1fec8e78-bce4-4aaf-ab1b-5451cc387264`
-     - Mobile: `5e3ce6c0-2b1f-4285-8d4b-75ee78787346`
-     - Web: `4345a7b9-9a63-4910-a426-35363201d503`
-
+   - **Application ID URI**: Configure based on your app type:
+      - **Standalone bot**: `api://botid-{YourBotId}` (where `{YourBotId}` is your Microsoft Entra application ID)
+      - **App with multiple capabilities** (bot + messaging extension + tab): `api://fully-qualified-domain-name.com/botid-{YourClientId}` (where `{YourClientId}` is your bot app ID)
+      - **Domain format**: Use lowercase letters only (e.g., `demoapplication.example.net`, not `DemoApplication.example.net`)
+      
+      - **Add scope**: `access_as_user` (admin & user consent, enabled)
+      - **Authorize Teams clients** (choose based on your scenario):
+        
+        | Client ID | For authorizing... |
+        |-----------|-------------------|
+        | `1fec8e78-bce4-4aaf-ab1b-5451cc387264` | Teams mobile or desktop application |
+        | `5e3ce6c0-2b1f-4285-8d4b-75ee78787346` | Teams web application |
+        | `4765445b-32c6-49b0-83e6-1d93765276ca` | Microsoft 365 web application |
+        | `0ec893e0-5785-4de6-99da-4ed124e5296c` | Microsoft 365 desktop application |
+        | `d3590ed6-52b3-4102-aeff-aad2292ab01c` | Microsoft 365 mobile application |
+        | `bc59ab01-8403-45c6-8796-ac3ef710b3e3` | Outlook web application |
+        | `27922004-5251-4030-b22d-91ecd9a37ea4` | Outlook mobile application |
+        
+        **For Teams SSO**: Add `1fec8e78-bce4-4aaf-ab1b-5451cc387264` (mobile/desktop) and `5e3ce6c0-2b1f-4285-8d4b-75ee78787346` (web)
+         
+         ![alt text](assets/authorized_client_apps.png)
+         
 4. **Certificates & secrets**:
    - **New client secret** → Copy value immediately → Store securely
 

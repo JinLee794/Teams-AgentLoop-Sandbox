@@ -1,29 +1,49 @@
 # Teams + Logic App + Azure AI Search (ServiceNow Index) PoC
+
 ## Objective
 Prototype a secure Teams agent loop that queries a ServiceNow-backed Azure AI Search index.  
-User access is restricted via **Okta/Entra-based impersonation** so each user only sees data they are authorized to view.
+User access is restricted via **Okta federation** so each user only sees data they are authorized to view.
+
+> **🎯 Two Federation Approaches Available:**
+> 
+> - **Option 1:** Okta → Entra ID (SAML) → Teams SSO → Logic App
+> - **Option 2:** Okta OAuth → Teams Bot → APIM Gateway → Logic App
+>
+> **See [Architecture Decision Guide](./README_ARCHITECTURE_DECISION.md) to choose the right approach for your needs.**
 
 ### Assumptions & Prerequisites
-- Microsoft Entra ID has direct federation or SCIM provisioning from Okta so group claims surface in Teams SSO tokens.
+- **Option 1:** Microsoft Entra ID has direct federation or SCIM provisioning from Okta so group claims surface in Teams SSO tokens.
+- **Option 2:** Azure API Management deployed to validate Okta JWT tokens and enforce policies.
 - ServiceNow export/ETL process (Logic App, Data Factory, or custom pipeline) keeps knowledge articles and ACL metadata current in Azure AI Search.
-- Logic App, Azure API Management, and Azure AI Search resources are deployed with managed identities and required RBAC permissions in the same tenant.
+- Logic App and Azure AI Search resources are deployed with managed identities and required RBAC permissions in the same tenant.
 
 ---
 
 ## System Overview
 
-### Core Components
+> **Note:** This section describes **Option 1 (Direct Entra Federation)**. For **Option 2 (APIM Gateway)**, see the [Architecture Decision Guide](./README_ARCHITECTURE_DECISION.md) and [Identity Federation Flow](./README_IDENTITY_FEDERATION_FLOW.md#option-2-api-management-gateway-flow).
+
+### Core Components (Option 1)
 | Layer | Role |
 |-------|------|
 | **Teams App / Bot** | Front-end for user queries (Teams SSO token issuance). |
 | **Microsoft Entra ID** | Issues access tokens; supports OBO (On-Behalf-Of) flow. |
-| **Okta** | Identity provider federated with Entra or used via Teams connector for workflows. |
+| **Okta** | Identity provider federated with Entra via SAML. |
 | **Logic App (Agent Loop)** | Executes orchestrated retrieval, handles token validation and OBO exchange, calls Azure AI Search. |
+| **Azure AI Search (ServiceNow Index)** | Stores indexed ServiceNow data with ACL metadata. |
+
+### Core Components (Option 2)
+| Layer | Role |
+|-------|------|
+| **Teams Bot** | Front-end for user queries with custom OAuth connection. |
+| **Okta OAuth Server** | Issues JWT tokens with group claims. |
+| **Azure API Management** | Validates Okta tokens, enforces policies, extracts claims. |
+| **Logic App (Agent Loop)** | Executes orchestrated retrieval using headers from APIM. |
 | **Azure AI Search (ServiceNow Index)** | Stores indexed ServiceNow data with ACL metadata. |
 
 ---
 
-## High-Level Flow
+## High-Level Flow (Option 1: Entra Federation)
 
 ```mermaid
 sequenceDiagram
@@ -49,6 +69,8 @@ sequenceDiagram
 ```
 
 Entra remains the token issuer for Teams SSO; Okta integration only supplies identity attributes and group memberships that Entra includes in the downstream access tokens.
+
+**For Option 2 (APIM Gateway) flow diagram, see:** [README_IDENTITY_FEDERATION_FLOW.md - Option 2](./README_IDENTITY_FEDERATION_FLOW.md#option-2-api-management-gateway-flow)
 
 ## Agent Loop Integration (A2A)
 

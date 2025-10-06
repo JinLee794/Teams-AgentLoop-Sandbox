@@ -1,7 +1,14 @@
 
 ## Authentication Flow Overview
 
-The following diagram illustrates the complete authentication and authorization flow across all components:
+> **Two Architecture Options**: This document presents both federation approaches
+>
+> - **Option 1**: Direct Okta → Entra ID → Teams SSO (shown in main diagram)
+> - **Option 2**: Okta → APIM Gateway → Logic App (shown in alternative diagram)
+
+### Option 1: Direct Entra ID Federation Flow
+
+The following diagram illustrates the complete authentication and authorization flow with Entra ID federation:
 
 ```mermaid
 sequenceDiagram
@@ -140,6 +147,169 @@ graph TD
     style Filter fill:#ffe1e1
     style Search fill:#e1fff4
 ```
+
+---
+
+### Option 2: API Management Gateway Flow
+
+Alternative architecture using Azure API Management as OAuth middleware:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User (Teams)
+    participant Teams as Teams Bot<br/>(A2A Client)
+    participant Okta as Okta OAuth<br/>(Authorization Server)
+    participant APIM as Azure APIM<br/>(Gateway + JWT Validator)
+    participant LA as Logic App<br/>(Agent Loop)
+    participant AIMS as Azure AI Search<br/>(ServiceNow Index)
+    participant OpenAI as Azure OpenAI
+
+    Note over User,OpenAI: Alternative: APIM as OAuth Gateway
+
+    rect rgb(240, 248, 255)
+        Note over User,Okta: Phase 1: Okta OAuth Authentication
+        User->>Teams: Open ServiceNow Agent
+        Teams->>Teams: Check cached Okta token
+        alt No valid token
+            Teams->>Okta: Redirect to authorization endpoint<br/>(/oauth2/default/v1/authorize)
+            Okta->>User: Present login page
+            User->>Okta: Enter credentials
+            Okta->>Okta: Validate credentials
+            Okta->>Okta: Retrieve user groups
+            Okta->>Teams: Authorization code (redirect)
+            Teams->>Okta: Exchange code for token<br/>(/oauth2/default/v1/token)
+            Okta-->>Teams: Access token (JWT) with groups claim
+            Teams->>Teams: Cache token
+        end
+    end
+
+    rect rgb(255, 250, 240)
+        Note over Teams,APIM: Phase 2: A2A Discovery via APIM
+        Teams->>APIM: GET /.well-known/agent-card.json<br/>Authorization: Bearer {okta-token}
+        APIM->>APIM: Validate JWT (validate-jwt policy)
+        APIM->>LA: Forward request (managed identity)
+        LA-->>APIM: Agent card
+        APIM-->>Teams: Agent card: {name, endpoints, capabilities}
+    end
+
+    rect rgb(240, 255, 240)
+        Note over User,APIM: Phase 3: User Query via A2A + APIM
+        User->>Teams: "How do I reset my password?"
+        Teams->>Teams: Build A2A message payload
+        Teams->>APIM: POST /message/send<br/>Authorization: Bearer {okta-token}
+        
+        Note over APIM: APIM JWT Validation & Transformation
+        APIM->>Okta: Validate JWT against OpenID config
+        Okta-->>APIM: Token valid + metadata
+        APIM->>APIM: Extract claims:<br/>- User ID (sub)<br/>- Groups (from token)
+        APIM->>APIM: Apply policies:<br/>- Rate limiting<br/>- Request transformation
+        APIM->>APIM: Add custom headers:<br/>X-User-Id, X-User-Groups
+        APIM->>APIM: Remove Okta token,<br/>add managed identity
+        
+        APIM->>LA: Forward to Logic App<br/>X-User-Id, X-User-Groups headers
+        LA-->>APIM: Return {taskId, status: "running"}
+        APIM-->>Teams: Return {taskId, status: "running"}
+    end
+
+    rect rgb(255, 240, 245)
+        Note over LA,OpenAI: Phase 4: Agent Loop Execution
+        LA->>LA: Extract groups from X-User-Groups header
+        LA->>LA: Build ACL filter:<br/>acl_groups/any(g: g eq 'group1' OR g eq 'group2')
+        
+        LA->>AIMS: Search with filter<br/>Authorization: Managed Identity
+        AIMS->>AIMS: Execute security-trimmed search
+        AIMS-->>LA: Filtered results (only authorized docs)
+        
+        LA->>OpenAI: Generate response<br/>Authorization: Managed Identity
+        OpenAI-->>LA: Generated answer
+    end
+
+    rect rgb(245, 245, 245)
+        Note over APIM,User: Phase 5: A2A Response via APIM
+        Teams->>APIM: POST /tasks/get<br/>Authorization: Bearer {okta-token}
+        APIM->>APIM: Validate JWT
+        APIM->>LA: Forward request
+        LA-->>APIM: {status: "succeeded", message: {...}}
+        APIM-->>Teams: {status: "succeeded", message: {...}}
+        Teams-->>User: Display answer with citations
+    end
+
+    rect rgb(255, 245, 238)
+        Note over User,AIMS: Security Enforcement Points
+        Note right of Okta: ✓ OAuth token with groups claim
+        Note right of APIM: ✓ JWT validation (signature + claims)<br/>✓ Rate limiting & policies
+        Note right of APIM: ✓ Groups extracted and passed via headers
+        Note right of LA: ✓ Groups from headers used for ACL
+        Note right of AIMS: ✓ Search filtered by ACL groups
+    end
+```
+
+### APIM Policy Enforcement Flow
+
+```mermaid
+graph TD
+    subgraph "1. Okta Token"
+        OT["Okta JWT Token<br/>{<br/>  sub: 'user@example.com',<br/>  scp: 'api.servicenow.read',<br/>  groups: ['IT-Support', 'Employees']<br/>}"]
+    end
+    
+    subgraph "2. APIM validate-jwt Policy"
+        VP["<validate-jwt><br/>- Verify signature<br/>- Check issuer<br/>- Validate audience<br/>- Require scopes<br/>- Check expiration"]
+    end
+    
+    subgraph "3. APIM Transformation"
+        TR["Extract & Transform:<br/>userId = token.sub<br/>groups = token.groups<br/><br/>Add Headers:<br/>X-User-Id<br/>X-User-Groups"]
+    end
+    
+    subgraph "4. Backend Auth"
+        BA["Replace Okta token with:<br/>- Managed Identity OR<br/>- Logic App API Key"]
+    end
+    
+    subgraph "5. Logic App"
+        LA["Extract from headers:<br/>userId = X-User-Id<br/>groups = X-User-Groups<br/><br/>Build ACL filter:<br/>acl_groups/any(g: ...)"]
+    end
+    
+    subgraph "6. Azure AI Search"
+        AIS["Security-Trimmed Search<br/>Filter: acl_groups match<br/>Return: authorized docs only"]
+    end
+    
+    OT -->|HTTP Request| VP
+    VP -->|Valid| TR
+    VP -->|Invalid| ERR[401 Unauthorized]
+    TR --> BA
+    BA -->|Forward Request| LA
+    LA -->|Query with Filter| AIS
+    AIS -->|Results| LA
+    LA -->|Response| BA
+    BA -->|Response| Client[Teams Bot]
+    
+    style OT fill:#fff4e1
+    style VP fill:#ffe1e1
+    style TR fill:#e1ffe1
+    style BA fill:#e1f5ff
+    style LA fill:#e1fff4
+    style AIS fill:#ffe1f5
+    style ERR fill:#ffcccc
+```
+
+### Architecture Comparison
+
+| Aspect | Option 1: Entra Federation | Option 2: APIM Gateway |
+|--------|---------------------------|------------------------|
+| **Token Issuer** | Entra ID (via Okta SAML) | Okta OAuth (direct) |
+| **Teams Auth** | Native SSO (`getAuthToken()`) | Custom OAuth connection |
+| **Validation Layer** | Logic App EasyAuth | APIM validate-jwt policy |
+| **Group Claims** | JWT from Entra | JWT from Okta + APIM extraction |
+| **Backend Auth** | EasyAuth + Managed Identity | APIM Managed Identity or API Key |
+| **Components** | 3 (Okta, Entra, Logic App) | 4 (Okta, APIM, Logic App, AI Search) |
+| **Complexity** | Medium | High |
+| **Latency** | Lower | Higher (~10-50ms APIM overhead) |
+| **Cost** | Lower | Higher (APIM costs) |
+| **Flexibility** | Microsoft-centric | Multi-cloud, any OAuth provider |
+| **Monitoring** | App Insights | APIM Analytics + App Insights |
+| **Rate Limiting** | App-level | Centralized at APIM |
+
+---
 
 ### A2A Protocol Endpoints
 
