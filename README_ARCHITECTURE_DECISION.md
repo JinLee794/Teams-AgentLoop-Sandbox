@@ -66,8 +66,8 @@
 
 #### Option 2: APIM Gateway
 ```
-┌──────────┐      OAuth      ┌──────────┐     Okta Token    ┌──────────┐
-│   Okta   │ ─────────────> │  Teams   │ ──────────────> │   APIM   │
+┌──────────┐      OAuth      ┌──────────┐     Okta Token   ┌──────────┐
+│   Okta   │ ─────────────>  │  Teams   │ ──────────────>  │   APIM   │
 │  OAuth   │                 │   Bot    │                  │ Gateway  │
 │  Server  │                 └──────────┘                  └────┬─────┘
 └──────────┘                                                    │
@@ -75,8 +75,8 @@
      │ Token Validation                                         │ Extract groups
      │ (OpenID Config)                                          │ Transform
      └──────────────────────────────────────────────────────────┘
-                                                                 │ MI/API Key
-                                                                 ▼
+                                                                │ MI/API Key
+                                                                ▼
                              ┌──────────┐                  ┌────────────┐
                              │ Logic    │ <──────────────  │ X-User-Id  │
                              │   App    │   Custom Headers │ X-User-Grp │
@@ -177,9 +177,9 @@ Total Annual:                 $8,400-44,400
 Use this flowchart to guide your decision:
 
 ```
-┌─────────────────────────────────────────────┐
-│ Do you already have Entra ID infrastructure? │
-└──────────────┬──────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│ Do you already have Entra ID Federated infrastructure?│
+└──────────────┬────────────────────────────────────────┘
                │
       ┌────────┴────────┐
       │                 │

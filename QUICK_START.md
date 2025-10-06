@@ -41,7 +41,7 @@ QUICK_START.md (you are here)
 
 **Answer these 3 questions:**
 
-1. Do you already use Microsoft 365/Entra ID? **[Yes → Option 1]** / **[No → Option 2]**
+1. Do you already use Microsoft 365/Entra ID (with Federation)? **[Yes → Option 1]** / **[No → Option 2]**
 2. Do you need centralized API management? **[Yes → Option 2]** / **[No → Option 1]**
 3. Is cost optimization critical? **[Yes → Option 1]** / **[No → Either]**
 
